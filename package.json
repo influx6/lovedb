@@ -1,23 +1,23 @@
 {
-  "name": "quero",
+  "name": "lovedb",
   "version": "0.0.1",
-  "description": "a database query layer with a simple consistent query format",
+  "description": "love db simple loves your db with a single endpoint",
   "main": "quero.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/influx6/quero"
+    "url": "http://github.com/influx6/lovedb"
   },
   "keywords": [
     "db",
-    "query",
-    "quero",
+    "db query",
+    "love quero",
     "update",
-    "db",
-    "db",
-    "streams"
+    "lovedb",
+    "love db",
+    "love streams"
   ],
   "author": "Alexander Ewetumo",
   "license": "Mit",
