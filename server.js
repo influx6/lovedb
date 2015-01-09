@@ -2,6 +2,7 @@ module.exports = (function(){
 
   var _ = require('stackq');
   var q = require('quero');
+  var path = require('path');
   var plug = require('plugd');
   var resd = require('resourcedjs');
   var love = require('./lovedb.js');
@@ -14,58 +15,83 @@ module.exports = (function(){
   require('quero/adaptors/inmemory.js');
 
 
-  var rs = plug.Rack.make('lovedb.Server');
+  exports.Server = _.Configurable.extends({
+    init: function(map){
 
-  // rs.registerCompose('rack',function(){});
+    }
+  });
 
-  var grid = plug.Network.make('lovedb-Grid',function(){
-    //register the plug racks
-    this.crate(fs);
-    this.crate(love);
-    this.crate(rs);
-    this.crate(web);
+  love.registerPlug('rackdb',function(){
 
-    this.use('web.plug/compose/web.basic','io.server');
-    this.use('fs/compose/io','io.fs');
-    this.use('lovedb/compose/core','io.love');
+    var conf, net = plug.Network.make('rio',function(){
 
-    var serv = this.get('io.server'),
-        fsd = this.get('io.fs'),
-        iol = this.get('io.love');
-
-    // serv.share(iol);
-    serv.callWith(function(){
-      this.use(web.Plug('web.request','/io'),'app.route.io');
-
-      this.Task('web.router.route',{ url: '/io'});
-
-      this.get('app.route./*').close();
-      this.get('app.route.404').detachPoint('home.404');
-      this.get('app.route.404').attachPoint(function(p,sx){
-        var req = p.body.req, res = req.res;
-        res.writeHead(200,{ 'Content-Type': 'text/html'});
-        res.write('Welcome to Lovedb:Grid');
-        res.end('!');
-      },null,'home.404');
-
-      this.get('app.route.io').attachPoint(function(p,sx){
-        var req = p.body.req, method = ['io',req.method.toLowerCase()].join('.');
-        this.iTask(method,p.body);
-      },null,'io.pp');
+      this.use(fs.Plug('fs.ioControl','rack.io'),'rack.io');
 
     });
 
-    iol.callWith(function(){
-      this.tasks().on(_.tags.tagDefer('iol',function(f){ return f.message; }));
-      
-    });
+    this.attachNetwork(net);
+    this.networkOut(this.replies());
+
+    this.newTaskChannel('rc','rack.conf');
+
+    this.tasks('rc').on(this.$bind(function(p){
+      if(_.valids.not.contains(p.body,'base')) return;
+      conf = _.Util.clone(p.body);
+      net.Task('io.control.conf',conf);
+      this.tasks('rc').lock();
+      this.tasks('rc').flush();
+      initLoad();
+      return this.ReplyFrom(p,{ conf: conf, state: true });
+    }));
+
+
+    Function initLoad(){
+      var base = conf.base, models = conf.models || path.join(base,'models');
+
+      var loadModel = net.scheduleWatchTask('rack.io',)
+    };
 
 
   });
 
 
+  var grid = plug.Network.make('Love:Grid',function(){
+
+    //server plugs
+    this.use(web.Plug('http.server','io.server'),'love.io');
+    this.use(web.Plug('web.console','http.server.request'),'love.console');
+    this.use(web.Plug('web.router','http.server.request'),'love.router');
+    this.use(web.Plug('web.resource','http.server.request'),'love.resource');
+
+    //fs operations plugs
+    this.use(fs.Plug('fs.ioControl','io.fs'),'love.fs');
+
+    //database plugs
+    this.use(love.Plug('streamdb','love.db.stream'),'love.streamdb');
+    this.use(love.Plug('flatdb','love.db.flat'),'love.flatdb');
+    this.use(love.Plug('rackdb','love.db.rack'),'love.rackdb');
+    this.use(love.Plug('db','love.db.manager'),'love.db');
+
+
+    // //request handlers
+    // this.use(web.Plug('web.request','/'),'love.route.home');
+    // this.use(web.Plug('web.request','/io'),'love.route.io');
+    //
+    //
+    // this.get('love.route.home').attachPoint(function(q){
+    //   var req = q.body.req, res = req.res;
+    //   res.write(200); res.end('Love.db Server!');
+    // });
+    //
+    //
+    // this.Task('web.router.route',{ url: '/' });
+
+  });
+
+
+
+
   return {
-    Rack: rs,
     Grid: grid,
   };
 })();

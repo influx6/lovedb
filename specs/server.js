@@ -9,7 +9,7 @@ _.Jazz('Lovedb.Server specs',function($){
 
   var grid = love.Grid;
 
-  grid.iTask('io.server',{
+  grid.Task('io.server',{
     address: '127.0.0.1',
     port: 3001
   });
